@@ -71,13 +71,15 @@ If ((Get-NetIPConfiguration -InterfaceIndex $NetworkInterfaceID).Ipv4DefaultGate
     Remove-NetRoute -InterfaceIndex $NetworkInterfaceID -AddressFamily $IPType -Confirm:$false
 }
 
+# Setup the NIC
 New-NetIPAddress –InterfaceIndex $NetworkInterfaceID -AddressFamily $IPType –IPAddress $IPAddress –PrefixLength $MaskBits -DefaultGateway $GatewayIPAddress
-
 Set-DnsClientServerAddress -InterfaceIndex $NetworkInterfaceID -ServerAddresses $DNSIPAddress
 
+#Reverse DNS lookup to find the FQDN of the machine
 Start-Sleep -s 10
 
 $FQDNNameHost= (Resolve-DnsName $IPAddress).NameHost
     $DNSNameHost= $FQDNNameHost.split(".")[0]
-    
+
+#Join the machine to the domain with its new name
 Add-Computer -LocalCredential $LocalCredential@$env:ComputerName -NewName $DNSNameHost -Credential $DomainCredential@$NewDomain -DomainName $NewDomain -Options AccountCreate -OUPath $OUPath -Confirm -Restart
