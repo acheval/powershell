@@ -5,15 +5,33 @@ Start-Transcript -Append -Path $DesktopPath\$Stamp"_script.log"
 
 #Input the details
     #Network details
-[ipaddress]$IPAddress= Read-Host -Prompt "Enter the new IPv4 address of the machine"
+
+Write-Host "Enter the new IPv4 address of the machine:"
+    [ipaddress]$IPAddress= Read-Host 
     $IPAddress = $IPAddress.IPAddressToString
+    if ([bool] ($IPAddress -as [ipaddress])){
+        Write-Host $IPAddress "will be used"
+    } else {
+        Write-Host -ForegroundColor Red "Invalid IP Address"
+        break
+    }
 
-[ValidateRange(1,32)]$MaskBits = Read-Host -Prompt "Enter the mask bits"
 
-[ipaddress]$GatewayIPAddress = Read-Host -Prompt "Please enter the defaut gateway's IPv4 Address" 
+Write-Host "Enter the mask bits:"
+    [ValidateRange(1,32)]$MaskBits = Read-Host
+
+Write-Host "Please enter the defaut gateway's IPv4 Address:" 
+    [ipaddress]$GatewayIPAddress = Read-Host 
     $GatewayIPAddress = $GatewayIPAddress.IPAddressToString
+    if ([bool] ($GatewayIPAddress -as [ipaddress])){
+        Write-Host $GatewayIPAddress "will be used"
+    } else {
+        Write-Host -ForegroundColor Red "Invalid IP Address"
+        break
+    }
 
-[ipaddress]$DNSIPAddress = Read-Host -Prompt "Please enter the DNS IPv4 Address"
+Write-Host "Please enter the DNS IPv4 Address:"
+[ipaddress]$DNSIPAddress = Read-Host 
     $DNSIPAddress = $DNSIPAddress.IPAddressToString
 
 $IPType = "IPv4"
@@ -59,7 +77,7 @@ Set-DnsClientServerAddress -InterfaceIndex $NetworkInterfaceID -ServerAddresses 
 
 Start-Sleep -s 10
 
-$FQDNNameHost= Resolve-DnsName $IPAddress | Select-Object -ExpandProperty NameHost
+$FQDNNameHost= (Resolve-DnsName $IPAddress).NameHost
     $DNSNameHost= $FQDNNameHost.split(".")[0]
     
 Add-Computer -LocalCredential $LocalCredential@$env:ComputerName -NewName $DNSNameHost -Credential $DomainCredential@$NewDomain -DomainName $NewDomain -Options AccountCreate -OUPath $OUPath -Confirm -Restart
