@@ -1,0 +1,1 @@
+Invoke-Command -ScriptBlock {Get-WmiObject -Class win32_Product | Where-Object {$_.Name -match "Microsoft Office Professional Plus 2010"} | Select-Object PSComputerName, Name, PackageName, InstallDate | Sort-Object PSComputerName} -ComputerName (Get-Content .\Unavailable_Machines.txt) | Out-File Office2010.txt

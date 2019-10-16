@@ -1,0 +1,1 @@
+(Get-ADComputer -Filter * -SearchBase "OU=ClientComputers,OU=SystemResources,OU=INTERNALS,DC=csm,DC=goe,DC=ses").Name | Sort-Object Name | Out-File ADComputers.txt
