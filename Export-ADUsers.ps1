@@ -73,14 +73,14 @@ try{
 		
 		#Fetching AD Users per OU
 		$adUsers = Get-ADUser -Filter * -SearchBase $OU -Properties SAMAccountName, 
-																	DisplayName,
-																	GivenName,
-																	Surname,
-																	EmailAddress,
-																	OfficePhone,
-																	Description,
-																	UserAccountControl,
-																	whenChanged
+									DisplayName,
+									GivenName,
+									Surname,
+									EmailAddress,
+									OfficePhone,
+									Description,
+									UserAccountControl,
+									whenChanged
 																	
 		# Iterating through the users
 		ForEach ($adUser in $adUsers) {
@@ -96,10 +96,10 @@ try{
 			$obj += [PSCustomObject] @{
 					SAMAccountName     = $adUser.SAMAccountName
 					UserName           = $userName
-					GivenName		   = $adUser.GivenName
-					Surname			   = $adUser.Surname
+					GivenName	   = $adUser.GivenName
+					Surname		   = $adUser.Surname
 					EmailAddress	   = $adUser.EmailAddress
-					OfficePhone		   = $adUser.OfficePhone
+					OfficePhone	   = $adUser.OfficePhone
 					Description        = $adUser.Description
 					UserAccountControl = $adUser.UserAccountControl
 					MemberOf           = $userGroups
