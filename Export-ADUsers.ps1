@@ -1,8 +1,9 @@
 ###########################################################################
 # Author: Alexis CHEVALLIER
 # Date: 2020-10-21
-# Last revision date: 2021-03-02
+# Last revision date: 2021-04-19
 # Revision: -
+#    - Added Credentials and domain management, moved export file and log files to different directories
 #    - Added files cleanup for files older than 7 days. Added logging and verbosity. Replaced tabs with spaces. (2021-03-02)
 #    - Added Write-Log function, moved export result file to variable (2021-03-02)
 #    - Added OU loop, modified user loop, added group per user, added username, changed csv delimiter, changed properties (2021-03-01)
@@ -11,7 +12,7 @@
 ###########################################################################
 
 <# .SYNOPSIS
-    Export enabled AD users with full identities and group membership
+    Export AD users with full identities and group membership
 .DESCRIPTION
     Fetches and exports AD Users within given OU :
     - SAMAccountName
@@ -25,22 +26,28 @@
     - whenChanged
 .RETURNVALUE
     This script returns a timestamped CSV file under the current working dir.
+    It also logs its progression and cleans up its files older that a given time
 #>
 # Import modules
 Import-Module ActiveDirectory
+
+# Import Credentials
+$credentials = Import-CliXml user.cred
 
 # Initialize variables
 $exportResults = @()
 $obj = @()
 $date = Get-Date -Format yyyyMMdd
 $dateCleanup = -7
-$workingDir = Get-Location
-$global:exportResultsFileName = "Export_ADUsers"
-$exportResultsFilePath = "$($workingdir)\$($date)_-_$($global:exportResultsFileName).csv"
+$targetDomain = "spldom.local"
+$workingDir = "E:\Program Files\Export-ADUsers"
+$logDir = "$($workingDir)\log"
+$exportDir = "E:\ISP_SNOW_Uploads\Export-ADUsers"
+$fileName = "Export_ADUsers"
+$exportResultsFilePath = "$($exportDir)\$($date)_-_$($fileName).csv"
 $exportResultsCleanupDate = (Get-Date).AddDays($dateCleanup)
 
-$OUs = 'OU=External Resources,DC=servitia,DC=internal',
-       'OU=Internal Resources,DC=servitia,DC=internal'
+$OUs = 'OU=User Accounts,DC=spldom,DC=local'
 
 Function Write-Log {
     [CmdletBinding()]
@@ -56,7 +63,7 @@ Function Write-Log {
     
     [Parameter(Mandatory=$False)]
     [string]
-    $logFile = "$workingdir\$($date)_-_$($global:exportResultsFileName).log"
+    $logFile = "$logDir\$($date)_-_$($fileName).log"
     )
 
     $stamp = (Get-Date).toString("yyyy/MM/dd HH:mm:ss")
@@ -72,28 +79,32 @@ Function Write-Log {
 Write-Log "Starting export of AD Users"
 
 try{
-    
+	
     # Looping through the OUs
     ForEach($OU in $OUs){
     
         Write-Log "Processing $($OU)"
-        
+        		
         #Fetching AD Users per OU
-        $adUsers = Get-ADUser -Filter * -SearchBase $OU -Properties SAMAccountName, 
-                                                                    DisplayName,
-                                                                    GivenName,
-                                                                    Surname,
-                                                                    EmailAddress,
-                                                                    OfficePhone,
-                                                                    Description,
-                                                                    UserAccountControl,
-                                                                    whenChanged
-                                    
+        $adUsers = Get-ADUser -Server $targetDomain `
+							-Credential $credentials `
+							-Filter * `
+							-SearchBase $OU `
+							-Properties SAMAccountName, 
+                                        DisplayName,
+                                        GivenName,
+                                        Surname,
+                                        EmailAddress,
+                                        OfficePhone,
+                                        Description,
+                                        UserAccountControl,
+                                        whenChanged
+
         # Iterating through the users
         ForEach ($adUser in $adUsers) {
             
             # Fetching groups
-            $userGroups = (Get-ADPrincipalGroupMembership -Identity $adUser |
+            $userGroups = (Get-ADPrincipalGroupMembership -Server $targetDomain -Credential $credentials -Identity $adUser |
                         Select-Object -ExpandProperty name) -Join ','
             
             # Creating User.Name variable
@@ -129,8 +140,14 @@ try{
     Export-Csv -Path $($exportResultsFilePath) -Delimiter ';'
     
     #Removing old exports
-    Write-Log "Cleaning up older logs and exports"
-    Get-ChildItem $workingDir\*$global:exportResultsFileName.* | 
+    Write-Log "Cleaning up older exports"
+    Get-ChildItem $exportDir\*$fileName.* | 
+    Where-Object { $_.LastWriteTime -lt $exportResultsCleanupDate } | 
+    Remove-Item
+    
+    #Removing old logs
+    Write-Log "Cleaning up older logs"
+    Get-ChildItem $logDir\*$fileName.* | 
     Where-Object { $_.LastWriteTime -lt $exportResultsCleanupDate } | 
     Remove-Item
     
